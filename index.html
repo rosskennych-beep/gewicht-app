@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Gewichtsprüfung</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#111111">
+
+  <!-- iOS "Web App" -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Gewichtsprüfung">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+
+  <style>
+    :root { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin:0; background:#f6f7fb; color:#111; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 18px; padding-bottom: 36px; }
+    .card { background:#fff; border-radius: 16px; padding: 16px; box-shadow: 0 8px 28px rgba(0,0,0,.10); }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display:block; font-size: 12px; color:#444; margin-bottom: 6px; }
+    input, textarea {
+      width:100%; padding: 12px 12px; font-size: 16px;
+      border:1px solid #d7dbe7; border-radius: 12px; outline:none;
+      background:#fff;
+    }
+    input:focus, textarea:focus { border-color:#6b7cff; box-shadow:0 0 0 3px rgba(107,124,255,.15); }
+    textarea { min-height: 44px; resize: vertical; }
+    .muted { color:#666; font-size: 12px; margin-top: 6px; line-height: 1.25; }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; }
+    button {
+      cursor:pointer; border:0; padding: 12px 14px; border-radius: 12px;
+      background:#111; color:#fff; font-weight: 650; font-size: 15px;
+    }
+    button.secondary { background:#eef0f8; color:#111; }
+    button.danger { background:#c62828; }
+    button:active { transform: translateY(1px); }
+    .results { margin-top: 14px; display:grid; gap:10px; }
+    .pill {
+      display:flex; justify-content:space-between; gap:12px;
+      padding: 12px; border-radius: 14px; background:#f2f4ff;
+    }
+    .pill strong { font-weight: 800; }
+    .ok { background:#e9fbf0; }
+    .bad { background:#ffecec; }
+    .full { grid-column: 1 / -1; }
+
+    .toolbar { margin-top: 12px; display:flex; gap:12px; flex-wrap: wrap; }
+    .tableWrap { margin-top: 12px; overflow:auto; border:1px solid #e3e6f2; border-radius: 12px; }
+    table { width:100%; border-collapse: collapse; min-width: 720px; }
+    th, td { padding: 10px 10px; border-bottom: 1px solid #eef0f7; font-size: 14px; text-align:left; }
+    th { font-size: 12px; color:#444; background:#fafbff; position: sticky; top: 0; }
+    tr:last-child td { border-bottom: 0; }
+    .right { text-align:right; }
+    .chip { display:inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .chip.ok { background:#e9fbf0; }
+    .chip.bad { background:#ffecec; }
+
+    .banner {
+      display:none;
+      margin: 12px 0 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background:#fff7e6;
+      border:1px solid #ffe0a3;
+      color:#5a4100;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .foot { margin-top: 12px; font-size: 12px; color:#666; line-height: 1.35; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } table { min-width: 0; } }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Gewichtsprüfung</h1>
+
+      <div class="banner" id="iosBanner">
+        <strong>Als App installieren (iPhone):</strong><br>
+        In Safari unten auf <strong>Teilen</strong> → <strong>Zum Home-Bildschirm</strong>.
+      </div>
+
+      <div class="grid">
+        <div>
+          <label for="max">Maximalgewicht (kg)</label>
+          <input id="max" type="text" inputmode="decimal" placeholder="z.B. 100,00" autocomplete="off" />
+        </div>
+
+        <div>
+          <label for="measured">Gemessenes Gewicht (kg)</label>
+          <input id="measured" type="text" inputmode="decimal" placeholder="z.B. 104,50" autocomplete="off" />
+        </div>
+
+        <div>
+          <label for="tol">Toleranzabzug (%)</label>
+          <input id="tol" type="text" inputmode="decimal" value="3" autocomplete="off" />
+          <div class="muted">Wird vom gemessenen Gewicht abgezogen</div>
+        </div>
+
+        <div>
+          <label for="limit">Überschreitungs-Grenze (%)</label>
+          <input id="limit" type="text" inputmode="decimal" value="5" autocomplete="off" />
+          <div class="muted">Prüft: nach Toleranz &gt; Max + Grenze</div>
+        </div>
+
+        <div class="full">
+          <label for="note">Notiz (optional)</label>
+          <textarea id="note" placeholder="z.B. Waage, Ort, Auftrag, …"></textarea>
+        </div>
+
+        <div class="full row">
+          <button id="save" type="button">Messung speichern</button>
+          <button id="reset" type="button" class="secondary">Zurücksetzen</button>
+          <span class="muted">Eingaben ändern → Ergebnis aktualisiert automatisch.</span>
+        </div>
+      </div>
+
+      <div class="results" id="results"></div>
+
+      <div class="toolbar">
+        <button id="exportCsv" type="button" class="secondary">Export CSV</button>
+        <button id="clearAll" type="button" class="danger">Alles löschen</button>
+        <span class="muted">Speicherung lokal auf deinem Gerät (offline).</span>
+      </div>
+
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th class="right">Max (kg)</th>
+              <th class="right">Gemessen (kg)</th>
+              <th class="right">Nach Tol. (kg)</th>
+              <th class="right">Übergewicht (kg)</th>
+              <th class="right">Abw. (%)</th>
+              <th>Status</th>
+              <th>Notiz</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+
+      <div class="foot">
+        Formeln: nach Toleranz = gemessen × (1 − Toleranz%); Übergewicht kg = max(0, nach Toleranz − Max);
+        Überschritten? nach Toleranz &gt; Max × (1 + Grenze%).
+      </div>
+    </div>
+  </div>
+
+<script>
+  const elMax = document.getElementById("max");
+  const elMeasured = document.getElementById("measured");
+  const elTol = document.getElementById("tol");
+  const elLimit = document.getElementById("limit");
+  const elNote = document.getElementById("note");
+  const results = document.getElementById("results");
+  const resetBtn = document.getElementById("reset");
+  const saveBtn = document.getElementById("save");
+  const historyBody = document.getElementById("historyBody");
+  const exportBtn = document.getElementById("exportCsv");
+  const clearAllBtn = document.getElementById("clearAll");
+  const iosBanner = document.getElementById("iosBanner");
+
+  const STORAGE_KEY = "gewichtapp_history_v1";
+
+  function isIOS() {
+    const ua = navigator.userAgent || "";
+    return /iPhone|iPad|iPod/i.test(ua);
+  }
+  function isStandaloneIOS() {
+    return window.navigator.standalone === true;
+  }
+  if (isIOS() && !isStandaloneIOS()) iosBanner.style.display = "block";
+
+  function parseNum(s) {
+    if (typeof s !== "string") return NaN;
+    const normalized = s.trim().replace(/\s+/g, "").replace(",", ".");
+    const v = Number(normalized);
+    return Number.isFinite(v) ? v : NaN;
+  }
+  const fmtKg = (v) => Number.isFinite(v) ? `${v.toFixed(2)}` : "—";
+  const fmtKgWithUnit = (v) => Number.isFinite(v) ? `${v.toFixed(2)} kg` : "—";
+  const fmtPctSigned = (ratio) => Number.isFinite(ratio) ? `${(ratio * 100).toFixed(2)} %` : "—";
+
+  function calc() {
+    const max = parseNum(elMax.value);
+    const measured = parseNum(elMeasured.value);
+    const tolPct = parseNum(elTol.value) / 100;
+    const limitPct = parseNum(elLimit.value) / 100;
+
+    const ok = Number.isFinite(max) && max > 0 &&
+               Number.isFinite(measured) &&
+               Number.isFinite(tolPct) &&
+               Number.isFinite(limitPct);
+
+    if (!ok) return { ok:false };
+
+    const afterTol = measured * (1 - tolPct);
+    const overweightKg = Math.max(0, afterTol - max);
+    const deviationRatio = (afterTol - max) / max;
+    const exceeded = afterTol > max * (1 + limitPct);
+
+    return { ok:true, max, measured, tolPct, limitPct, afterTol, overweightKg, deviationRatio, exceeded };
+  }
+
+  function renderResults() {
+    const c = calc();
+    if (!c.ok) {
+      results.innerHTML = `
+        <div class="pill"><span>Gemessen nach Toleranzabzug</span><strong>—</strong></div>
+        <div class="pill"><span>Übergewicht (kg)</span><strong>—</strong></div>
+        <div class="pill"><span>Abweichung zum Maximum (%)</span><strong>—</strong></div>
+        <div class="pill"><span>Mehr als Grenze über Max?</span><strong>—</strong></div>
+      `;
+      return;
+    }
+
+    const statusClass = c.exceeded ? "bad" : "ok";
+    const statusText = c.exceeded ? "JA" : "NEIN";
+
+    results.innerHTML = `
+      <div class="pill"><span>Gemessen nach Toleranzabzug</span><strong>${fmtKgWithUnit(c.afterTol)}</strong></div>
+      <div class="pill"><span>Übergewicht (kg)</span><strong>${fmtKgWithUnit(c.overweightKg)}</strong></div>
+      <div class="pill"><span>Abweichung zum Maximum (%)</span><strong>${fmtPctSigned(c.deviationRatio)}</strong></div>
+      <div class="pill ${statusClass}"><span>Mehr als ${(c.limitPct*100).toFixed(2)} % über Max?</span><strong>${statusText}</strong></div>
+    `;
+  }
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch { return []; }
+  }
+  function saveHistory(arr) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  }
+
+  function renderHistory() {
+    const arr = loadHistory();
+    if (arr.length === 0) {
+      historyBody.innerHTML = `<tr><td colspan="9" class="muted">Noch keine gespeicherten Messungen.</td></tr>`;
+      return;
+    }
+
+    historyBody.innerHTML = arr.map((item, idx) => {
+      const chipClass = item.exceeded ? "chip bad" : "chip ok";
+      const chipText = item.exceeded ? "Überschritten" : "OK";
+      const safeNote = (item.note || "").replaceAll("<","&lt;").replaceAll(">","&gt;");
+      return `
+        <tr>
+          <td>${item.date}</td>
+          <td class="right">${fmtKg(item.max)}</td>
+          <td class="right">${fmtKg(item.measured)}</td>
+          <td class="right">${fmtKg(item.afterTol)}</td>
+          <td class="right">${fmtKg(item.overweightKg)}</td>
+          <td class="right">${(item.deviationRatio*100).toFixed(2)} %</td>
+          <td><span class="${chipClass}">${chipText}</span></td>
+          <td>${safeNote}</td>
+          <td class="right"><button class="secondary" data-del="${idx}" type="button">Löschen</button></td>
+        </tr>
+      `;
+    }).join("");
+
+    historyBody.querySelectorAll("button[data-del]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const i = Number(btn.getAttribute("data-del"));
+        const arr2 = loadHistory();
+        arr2.splice(i, 1);
+        saveHistory(arr2);
+        renderHistory();
+      });
+    });
+  }
+
+  function nowLocalString() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function onSave() {
+    const c = calc();
+    if (!c.ok) { alert("Bitte gültige Zahlen eingeben (Max > 0, gemessen, Toleranz, Grenze)."); return; }
+    const entry = {
+      date: nowLocalString(),
+      max: c.max,
+      measured: c.measured,
+      tolPct: c.tolPct,
+      limitPct: c.limitPct,
+      afterTol: c.afterTol,
+      overweightKg: c.overweightKg,
+      deviationRatio: c.deviationRatio,
+      exceeded: c.exceeded,
+      note: elNote.value.trim()
+    };
+    const arr = loadHistory();
+    arr.unshift(entry);
+    saveHistory(arr);
+    renderHistory();
+    elNote.value = "";
+  }
+
+  function exportCSV() {
+    const arr = loadHistory();
+    if (arr.length === 0) { alert("Keine Daten zum Exportieren."); return; }
+    const header = ["Datum","Max_kg","Gemessen_kg","Toleranz_%","Grenze_%","NachTol_kg","Übergewicht_kg","Abweichung_%","Überschritten","Notiz"];
+    const rows = arr.map(e => [
+      e.date,
+      e.max.toFixed(2),
+      e.measured.toFixed(2),
+      (e.tolPct*100).toFixed(2),
+      (e.limitPct*100).toFixed(2),
+      e.afterTol.toFixed(2),
+      e.overweightKg.toFixed(2),
+      (e.deviationRatio*100).toFixed(2),
+      e.exceeded ? "JA" : "NEIN",
+      (e.note || "").replaceAll('"','""')
+    ]);
+
+    const csv = [header.join(","), ...rows.map(r => r.map(v => {
+      const s = String(v);
+      return /[",\n]/.test(s) ? `"${s}"` : s;
+    }).join(","))].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "gewicht-messungen.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function clearAll() {
+    if (!confirm("Wirklich alle gespeicherten Messungen löschen?")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    renderHistory();
+  }
+
+  [elMax, elMeasured, elTol, elLimit].forEach(el => el.addEventListener("input", renderResults));
+  resetBtn.addEventListener("click", () => {
+    elMax.value = "";
+    elMeasured.value = "";
+    elTol.value = "3";
+    elLimit.value = "5";
+    elNote.value = "";
+    renderResults();
+  });
+  saveBtn.addEventListener("click", onSave);
+  exportBtn.addEventListener("click", exportCSV);
+  clearAllBtn.addEventListener("click", clearAll);
+
+  renderResults();
+  renderHistory();
+</script>
+</body>
+</html>
