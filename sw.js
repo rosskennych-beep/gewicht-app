@@ -1,4 +1,4 @@
-const CACHE_NAME = "gewicht-app-cache-v1";
+const CACHE_NAME = "gewicht-app-cache-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -26,16 +26,13 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
-
-  // Cache-first für App-Dateien
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
       return fetch(req).then((res) => {
-        // GET Requests aus eigener Domain cachen
         if (req.method === "GET" && res.ok && new URL(req.url).origin === location.origin) {
           const copy = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(() => {});
+          caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(()=>{});
         }
         return res;
       }).catch(() => caches.match("./index.html"));
