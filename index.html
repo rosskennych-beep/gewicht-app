@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gewichtsprüfung</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gewicht">
+<meta name="theme-color" content="#111111">
+
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+
+<style>
+:root{
+  --bg:#f6f7fb;--card:#fff;--text:#111;--muted:#666;--border:#e3e6f2;
+  --ok:#e9fbf0;--bad:#ffecec;--btn:#111;--btnText:#fff;
+  --barBg:rgba(255,255,255,.95);
+}
+:root[data-theme="dark"]{
+  --bg:#0b0d12;--card:#121521;--text:#f2f3f5;--muted:#a8b0c0;--border:#232a3b;
+  --ok:rgba(46,204,113,.15);--bad:rgba(231,76,60,.2);--btn:#f2f3f5;--btnText:#111;
+  --barBg:rgba(18,21,33,.95);
+}
+body{margin:0;font-family:-apple-system,system-ui;background:var(--bg);color:var(--text);}
+.wrap{max-width:900px;margin:auto;padding:16px;padding-bottom:120px;}
+.card{background:var(--card);border-radius:16px;padding:16px;border:1px solid var(--border);}
+h1{margin:0;font-size:18px}
+label{font-size:12px;color:var(--muted)}
+input,textarea{width:100%;padding:12px;font-size:16px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+.pill{margin-top:10px;padding:12px;border-radius:12px;display:flex;justify-content:space-between}
+.ok{background:var(--ok)}.bad{background:var(--bad)}
+.bottomBar{position:fixed;bottom:0;left:0;right:0;background:var(--barBg);border-top:1px solid var(--border);padding:10px}
+.bottomInner{max-width:900px;margin:auto;display:flex;justify-content:space-between;gap:10px}
+button{padding:12px 14px;border-radius:12px;border:0;font-weight:700;background:var(--btn);color:var(--btnText)}
+button.secondary{background:#ccc;color:#111}
+.check{margin-top:10px}
+.check label{display:flex;gap:8px;margin-bottom:6px}
+.small{font-size:12px;color:var(--muted)}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Gewichtsprüfung (CH)</h1>
+    <p class="small">SVG / VRV – Berechnung mit Standard‑Massnahmen</p>
+
+    <div class="grid">
+      <div>
+        <label>Maximalgewicht (kg)</label>
+        <input id="max">
+      </div>
+      <div>
+        <label>Gemessenes Gewicht (kg)</label>
+        <input id="meas">
+      </div>
+      <div>
+        <label>Toleranz (%)</label>
+        <input id="tol" value="3">
+      </div>
+      <div>
+        <label>Grenze (%)</label>
+        <input id="limit" value="5">
+      </div>
+    </div>
+
+    <div id="result"></div>
+
+    <h3>Massnahmen</h3>
+    <div class="check">
+      <label><input type="checkbox" id="m_stop">Weiterfahrt untersagen</label>
+      <label><input type="checkbox" id="m_unload">Umladen/Abladen</label>
+      <label><input type="checkbox" id="m_doc">Dokumentation</label>
+      <label><input type="checkbox" id="m_ob">OB / Anzeige prüfen</label>
+      <label><input type="checkbox" id="m_report">Rapport erstellen</label>
+    </div>
+
+    <p class="small">
+      Rechtsgrundlagen: 
+      <a href="https://www.fedlex.admin.ch/eli/cc/1959/679_705_685/de" target="_blank">SVG</a> ·
+      <a href="https://www.fedlex.admin.ch/eli/cc/1962/1364_1409_1420/de" target="_blank">VRV</a>
+    </p>
+  </div>
+</div>
+
+<div class="bottomBar">
+  <div class="bottomInner">
+    <button onclick="toggleTheme()">Hell / Dunkel</button>
+    <button onclick="calc()">Berechnen</button>
+  </div>
+</div>
+
+<script>
+function n(v){return Number(String(v).replace(',','.'))}
+function r(x){return Math.round(x*100)/100}
+
+function calc(){
+  const max=n(maxEl.value), meas=n(measEl.value), tol=n(tolEl.value), lim=n(limitEl.value)
+  if(!max||!meas)return
+  const after=r(meas*(1-tol/100))
+  const pct=r((after-max)/max*100)
+  const over=after>max
+  result.innerHTML=`
+    <div class="pill ${over?'bad':'ok'}"><span>Nach Toleranz</span><b>${after} kg</b></div>
+    <div class="pill"><span>Überladen (%)</span><b>${pct>0?pct:0} %</b></div>
+  `
+  m_doc.checked=true
+  m_report.checked=true
+  m_ob.checked=pct>0
+  m_stop.checked=pct>lim
+  m_unload.checked=pct>lim
+}
+
+function toggleTheme(){
+  document.documentElement.dataset.theme=
+    document.documentElement.dataset.theme==='dark'?'light':'dark'
+}
+
+const maxEl=max, measEl=meas, tolEl=tol, limitEl=limit
+</script>
+</body>
+</html>
