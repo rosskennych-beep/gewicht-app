@@ -1,4 +1,4 @@
-const CACHE_NAME = "gewicht-app-cache-v6";
+const CACHE_NAME = "gewicht-app-cache-v7";
 const ASSETS = [
   "./",
   "./index.html",
